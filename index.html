@@ -38,6 +38,10 @@ button,.btn{font:inherit;border:0;border-radius:12px;padding:10px 14px;backgroun
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.bar select{width:auto}
 #map{height:calc(100dvh - 250px);min-height:300px;border-radius:16px}
 .pg[hidden]{display:none}.grip{touch-action:none;cursor:grab;padding:8px 10px;margin:-8px 0 -8px -6px;font-size:22px;color:var(--m);user-select:none;-webkit-user-select:none}.ghost{position:fixed;z-index:50;pointer-events:none;background:var(--b);color:#fff;padding:8px 14px;border-radius:12px;font-weight:600;transform:translate(-50%,-130%);box-shadow:0 6px 18px #0004}.hot{outline:2px dashed var(--b)}
+#rep{display:none;font:12px/1.4 -apple-system,Helvetica,Arial,sans-serif;color:#000;background:#fff}
+#rep h1{font-size:22px;margin:0 0 2px}#rep h2{font-size:15px;margin:16px 0 6px;border-bottom:1px solid #999;padding-bottom:3px}
+#rep table{width:100%;border-collapse:collapse}#rep th,#rep td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}#rep th{background:#eee}#rep tr{page-break-inside:avoid}
+@media print{header,main,nav,#modal{display:none!important}#rep{display:block}body{background:#fff}@page{margin:14mm}}
 #modal{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
 #modal.o{display:flex}#mo{background:var(--c);border-radius:20px;padding:20px;width:min(560px,100%);max-height:92vh;overflow:auto}
 </style></head><body>
@@ -45,11 +49,11 @@ button,.btn{font:inherit;border:0;border-radius:12px;padding:10px 14px;backgroun
 <div class="pg" id="p-info"></div><div class="pg" id="p-veh"></div>
 <div class="pg" id="p-map"><div class="bar">
 <span class="seg" id="mm"><button data-m="view" class="on" onclick="mode('view')">Ansicht</button><button data-m="draw" onclick="mode('draw')">Zeichnen</button><button data-m="pos" onclick="mode('pos')">Standort setzen</button></span>
-<select id="mcol" title="Abschnittsfarbe"></select><button onclick="undo()">↩︎ Zurück</button><button class="dng" onclick="clr()">Zeichnung löschen</button>
+<span class="seg" id="sw"><button class="on" data-c="#ff3b30" onclick="pcol(this)"><span style="color:#ff3b30">●</span> Rot</button><button data-c="#ffcc00" onclick="pcol(this)"><span style="color:#ffcc00">●</span> Gelb</button><button data-c="#34c759" onclick="pcol(this)"><span style="color:#34c759">●</span> Grün</button></span><button onclick="undo()">↩︎ Zurück</button><button class="dng" onclick="clr()">Zeichnung löschen</button>
 <span class="seg"><button class="on" id="l0" onclick="lay(0)">Karte</button><button id="l1" onclick="lay(1)">Satellit</button></span>
 <button onclick="gps()">📍 GPS</button><button onclick="geo()">Adresse suchen</button></div><div id="map"></div></div>
 <div class="pg" id="p-dash"></div><div class="pg" id="p-notes"></div></main>
-<nav id="nav"></nav><div id="modal"><div id="mo"></div></div>
+<nav id="nav"></nav><div id="modal"><div id="mo"></div></div><div id="rep"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 const $=id=>document.getElementById(id),uid=()=>Math.random().toString(36).slice(2,9);
@@ -71,7 +75,7 @@ function pInfo(){const i=S.info,f=k=>`<div><label>${LBL[k]}</label><input type="
 const sum=ROLES.map(r=>{const n=S.persons.filter(p=>(p.roles||[]).includes(r));return n.length?`<div class="m"><b>${r}:</b> ${n.map(p=>esc(pName(p))).join('; ')}</div>`:''}).join('');
 return `<div class="card"><h2>Einsatzdaten</h2><div class="grid2">${['nr','kw','addr','el','start'].map(f).join('')}</div></div>
 <div class="card"><div class="row"><h2>Personen</h2><button class="pri" onclick="pf()">+ Person</button></div>${sum}
-<div class="grid2">${S.persons.map(p=>{const age=p.dob?Math.floor((Date.now()-new Date(p.dob))/315576e5):'';return `<div class="tile" onclick="pf('${p.id}')"><div><b>${esc(pName(p))}</b>${age!==''?` <span class="m">${age} J.</span>`:''} ${p.note?'💬':''}<div>${(p.roles||[]).concat(p.rfree?[p.rfree]:[]).map(r=>`<span class="chip">${esc(r)}</span>`).join('')}</div>${p.addr?`<div class="m">${esc(p.addr)}</div>`:''}</div></div>`}).join('')||'<p class="m">Noch keine Person angelegt.</p>'}</div></div>`}
+<div class="grid2">${S.persons.map(p=>{const age=p.dob?Math.floor((Date.now()-new Date(p.dob))/315576e5):'';return `<div class="tile" onclick="pf('${p.id}')"><div><b>${esc(pName(p))}</b>${age!==''?` <span class="m">${age} J.</span>`:''} ${p.note?'💬':''}<div>${(p.roles||[]).concat(p.rfree?[p.rfree]:[]).map(r=>`<span class="chip">${esc(r)}</span>`).join('')}</div>${p.addr?`<div class="m">${esc(p.addr)}</div>`:''}</div></div>`}).join('')||'<p class="m">Noch keine Person angelegt.</p>'}</div></div>${actCard()}`}
 function setI(k,v){S.info[k]=v;log('Einsatzdaten',`${LBL[k]}: ${v}`);hdr()}
 function pf(id){const p=S.persons.find(x=>x.id==id)||{roles:[]};
 mdl(`<h2>${id?'Person bearbeiten':'Neue Person'}</h2><div class="grid2"><div><label>Vorname</label><input id="f1" value="${esc(p.fn)}"></div><div><label>Nachname</label><input id="f2" value="${esc(p.ln)}"></div><div><label>Geburtsdatum</label><input id="f3" type="date" value="${esc(p.dob)}"></div><div><label>Adresse</label><input id="f4" value="${esc(p.addr)}"></div></div>
@@ -127,36 +131,52 @@ function dl(){const q=flt.toLowerCase();return S.diary.filter(d=>(d.c+' '+d.t).t
 function pNotes(){return `<div class="card"><h2>Schnellnotiz</h2><textarea oninput="S.quick=this.value;save()">${esc(S.quick)}</textarea><button class="pri" style="margin-top:8px" onclick="nq()">Als Notiz übernehmen</button></div>
 <div class="card"><h2>Notizen</h2>${S.notes.map(n=>`<div class="tile" onclick="ne('${n.id}')"><div><span class="m">${fmt(n.ts)}</span><div>${esc(n.txt)}</div></div><span class="chip ${n.st==1?'s0':n.st==2?'s1':''}" onclick="event.stopPropagation();ns('${n.id}')">${NS[n.st]}</span></div>`).join('')||'<p class="m">Noch keine Notizen.</p>'}</div>
 <div class="card"><h2>Einsatztagebuch</h2><div class="row"><input id="dm" placeholder="Manueller Eintrag"><button onclick="dmA()">Eintragen</button></div><label>Suche</label><input value="${esc(flt)}" oninput="flt=this.value;$('dl').innerHTML=dl()"><div id="dl">${dl()}</div></div>
-<div class="card"><h2>Einsatz sichern</h2><button onclick="exp()">Exportieren (JSON)</button> <label class="btn" style="margin:0">Importieren<input type="file" hidden accept=".json" onchange="imp(this.files[0])"></label> <button class="dng" onclick="newInc()">Neuer Einsatz</button><p class="m">Regelmäßig exportieren: Die Browser-Speicherung allein ist keine sichere Sicherung.</p></div>`}
+${actCard()}`}
 function nq(){if(!S.quick.trim())return;S.notes.unshift({id:uid(),ts:new Date().toISOString(),txt:S.quick,st:0});log('Notiz','Notiz erstellt');S.quick='';save();render()}
 function ns(id){const n=S.notes.find(x=>x.id==id);n.st=(n.st+1)%3;log('Notiz',`Status: ${NS[n.st]}`);save();render()}
 function ne(id){const n=S.notes.find(x=>x.id==id),t=prompt('Notiz bearbeiten',n.txt);if(t!==null&&t!=n.txt){n.txt=t;log('Notiz','Notiz geändert');save();render()}}
 function dmA(){const v=$('dm').value.trim();if(v){log('Manuell',v);render()}}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download=`fw-einsatz-${(S.info.nr||new Date().toISOString().slice(0,10)).replace(/\W/g,'_')}.json`;a.click()}
 function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.veh)||!Array.isArray(d.areas))throw 0;if(!confirm('Aktuellen Einsatz durch die Datei ersetzen?'))return;S=Object.assign(fresh(),d);mig();save();redraw();render()}catch(e){alert('Datei ungültig.')}};r.readAsText(f)}
-function newInc(){if(!confirm('Aktuellen Einsatz verwerfen und neu beginnen? Vorher exportieren!'))return;S=fresh();save();redraw();render()}
+const actCard=()=>`<div class="card"><h2>Einsatz abschließen</h2><div class="bar"><button class="pri" onclick="pdf()">PDF-Bericht</button><button onclick="exp()">JSON-Export</button><label class="btn" style="margin:0">JSON-Import<input type="file" hidden accept=".json" onchange="imp(this.files[0])"></label><button class="dng" onclick="newInc()">Einsatz löschen</button></div><p class="m">Erst PDF oder JSON sichern, dann löschen. Die Browser-Speicherung allein ist keine sichere Sicherung.</p></div>`;
+function newInc(){if(!confirm('Diesen Einsatz endgültig löschen?\n\nPersonen, Fahrzeuge, Zeichnung, Notizen und Tagebuch gehen verloren. Vorher PDF oder JSON sichern!'))return;S=fresh();sel=null;flt='';save();redraw();go('info')}
 
 /* ---------- Lagekarte ---------- */
-let map,base=[],drawn=[],cur,mk,md='view';
+let pc='#ff3b30',map,base=[],drawn=[],cur,mk,md='view';
 const col=a=>A(a).c;
 function initMap(){map=L.map('map').setView(S.info.lat?[S.info.lat,S.info.lng]:[51.16,10.45],S.info.lat?18:6);
-base=[L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}),L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'})];base[0].addTo(map);
+base=[L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}),L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'})];base[0].addTo(map);
 const c=map.getContainer();
-c.addEventListener('pointerdown',e=>{if(md!='draw'||!e.isPrimary)return;cur=L.polyline([map.mouseEventToLatLng(e)],{color:col($('mcol').value),weight:4}).addTo(map);c.setPointerCapture(e.pointerId);e.preventDefault()});
+c.addEventListener('pointerdown',e=>{if(md!='draw'||!e.isPrimary)return;cur=L.polyline([map.mouseEventToLatLng(e)],{color:pc,weight:4}).addTo(map);c.setPointerCapture(e.pointerId);e.preventDefault()});
 c.addEventListener('pointermove',e=>{if(cur)cur.addLatLng(map.mouseEventToLatLng(e))});
-const end=()=>{if(cur){S.draw.push({a:$('mcol').value,pts:cur.getLatLngs().map(p=>[p.lat,p.lng])});drawn.push(cur);cur=null;save()}};
+const end=()=>{if(cur){S.draw.push({c:pc,pts:cur.getLatLngs().map(p=>[p.lat,p.lng])});drawn.push(cur);cur=null;save()}};
 c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
 map.on('click',e=>{if(md=='pos'){setPos(e.latlng.lat,e.latlng.lng);mode('view')}});redraw();if(S.info.lat)setPos(S.info.lat,S.info.lng,map.getZoom())}
-function redraw(){if(!map)return;drawn.forEach(l=>map.removeLayer(l));drawn=S.draw.map(d=>L.polyline(d.pts,{color:col(d.a),weight:4}).addTo(map));if(mk){map.removeLayer(mk);mk=null}if(S.info.lat)setPos(S.info.lat,S.info.lng,map.getZoom())}
+function redraw(){if(!map)return;drawn.forEach(l=>map.removeLayer(l));drawn=S.draw.map(d=>L.polyline(d.pts,{color:d.c||col(d.a),weight:4}).addTo(map));if(mk){map.removeLayer(mk);mk=null}if(S.info.lat)setPos(S.info.lat,S.info.lng,map.getZoom())}
 function setPos(la,ln,z=18){S.info.lat=la;S.info.lng=ln;save();map.setView([la,ln],z);if(mk)map.removeLayer(mk);mk=L.circleMarker([la,ln],{radius:9,color:'#fff',weight:3,fillColor:'#007aff',fillOpacity:1}).addTo(map)}
-function mode(m){md=m;document.querySelectorAll('#mm button').forEach(b=>b.classList.toggle('on',b.dataset.m==m));if(map)m=='draw'?map.dragging.disable():map.dragging.enable()}
+function pcol(b){pc=b.dataset.c;document.querySelectorAll('#sw button').forEach(x=>x.classList.toggle('on',x==b))}
+function mode(m){md=m;document.querySelectorAll('#mm button').forEach(b=>b.classList.toggle('on',b.dataset.m==m));if(map){m=='draw'?map.dragging.disable():map.dragging.enable();map.getContainer().style.touchAction=m=='draw'?'none':''}}
 const lay=i=>{if(!map)return;base.forEach(b=>map.removeLayer(b));base[i].addTo(map);$('l0').classList.toggle('on',!i);$('l1').classList.toggle('on',!!i)};
 const undo=()=>{if(drawn.length){map.removeLayer(drawn.pop());S.draw.pop();save()}},clr=()=>{if(S.draw.length&&confirm('Gesamte Zeichnung löschen?')){S.draw=[];redraw()}};
 const gps=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>setPos(p.coords.latitude,p.coords.longitude),()=>alert('Standort nicht verfügbar. Adresse eingeben oder „Standort setzen“ nutzen.'),{enableHighAccuracy:true}):alert('Kein GPS verfügbar.');
 const geo=()=>{if(!S.info.addr)return alert('Zuerst im Tab Informationen eine Adresse eintragen.');fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(S.info.addr)).then(r=>r.json()).then(j=>j[0]?setPos(+j[0].lat,+j[0].lon):alert('Adresse nicht gefunden.')).catch(()=>alert('Keine Internetverbindung.'))};
-function mapShow(){const v=$('mcol').value||'ga';$('mcol').innerHTML=S.areas.map(a=>`<option value="${a.id}">${a.parent?'↳ ':''}${esc(a.name)}</option>`).join('');$('mcol').value=A(v).id==v?v:'ga';
-if(typeof L=='undefined'){$('map').innerHTML='<p class="m" style="padding:20px">Die Karte braucht Internet (Leaflet nicht geladen).</p>';return}
+function mapShow(){if(typeof L=='undefined'){$('map').innerHTML='<p class="m" style="padding:20px">Die Karte braucht Internet (Leaflet nicht geladen).</p>';return}
 if(!map)initMap();setTimeout(()=>map.invalidateSize(),60)}
+
+function pdf(){const f=t=>new Date(t).toLocaleString('de-DE'),i=S.info,old=document.title;
+const tb=(hd,rows)=>`<table><tr>${hd.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+const order=[];S.areas.filter(a=>!a.parent).forEach(a=>{order.push(a);if(a.id=='ga')order.push(...S.areas.filter(x=>x.parent))});
+const vr=[];order.forEach(a=>areaV(a.id).forEach(v=>vr.push([an(a.id),v.name,v.tr.map((s,k)=>`T${k+1}: ${ATS[s]}`).join(', ')||'–'])));
+const n=k=>S.veh.reduce((a,v)=>a+v.tr.filter(x=>x==k).length,0);
+document.title='Einsatzbericht_'+(i.nr||new Date().toISOString().slice(0,10)).replace(/\W/g,'_');
+$('rep').innerHTML=`<h1>Einsatzbericht Feuerwehr</h1><div>Erstellt: ${f(new Date())}</div>
+<h2>Einsatzdaten</h2>${tb(['Feld','Angabe'],[['Einsatznummer',i.nr||''],['Stichwort',i.kw||''],['Adresse',i.addr||''],['Einsatzleiter',i.el||''],['Beginn',i.start?f(i.start):'']])}
+<h2>Analyse</h2>${tb(['Fahrzeuge','Trupps gesamt','Bereit','Im Einsatz','Regeneration','Personen'],[[S.veh.length,S.veh.reduce((a,v)=>a+v.tr.length,0),n(0),n(1),n(2),S.persons.length]])}
+<h2>Fahrzeuge nach Abschnitt</h2>${vr.length?tb(['Abschnitt','Fahrzeug','Atemschutztrupps'],vr):'<p>Keine Fahrzeuge.</p>'}
+<h2>Personen</h2>${S.persons.length?tb(['Name','Geburtsdatum','Adresse','Rollen','Notiz'],S.persons.map(p=>[pName(p),p.dob?new Date(p.dob).toLocaleDateString('de-DE'):'',p.addr||'',(p.roles||[]).concat(p.rfree?[p.rfree]:[]).join(', '),p.note||''])):'<p>Keine Personen.</p>'}
+<h2>Notizen</h2>${S.notes.length?tb(['Zeit','Status','Notiz'],S.notes.slice().reverse().map(x=>[f(x.ts),NS[x.st],x.txt])):'<p>Keine Notizen.</p>'}
+<h2>Einsatztagebuch</h2>${S.diary.length?tb(['Zeit','Kategorie','Eintrag'],S.diary.slice().reverse().map(d=>[f(d.ts),d.c,d.t])):'<p>Keine Einträge.</p>'}`;
+window.onafterprint=()=>{document.title=old;$('rep').innerHTML=''};setTimeout(()=>print(),100)}
 
 /* ---------- Rahmen ---------- */
 const hdr=()=>$('hd').innerHTML=`<b>Einsatzleiter Feuerwehr</b><span>${esc([S.info.nr,S.info.addr].filter(Boolean).join(' · '))}</span>`;
