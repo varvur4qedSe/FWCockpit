@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FW-EL">
+<title>Einsatzleiter Feuerwehr</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--bg:#f2f2f7;--c:#fff;--t:#1c1c1e;--m:#8e8e93;--l:#e5e5ea;--b:#007aff;--g:rgba(120,120,128,.16)}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--c:#1c1c1e;--t:#fff;--l:#38383a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 20px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+header b{font-size:22px;letter-spacing:-.4px}header span{color:var(--m);font-size:13px}
+main{padding:6px 20px calc(100px + env(safe-area-inset-bottom));max-width:1400px;margin:auto}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:6;display:flex;background:color-mix(in srgb,var(--c) 85%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--l);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;background:none;border-radius:10px;font-size:11px;color:var(--m);display:flex;flex-direction:column;align-items:center;padding:4px;min-height:50px}
+nav button i{font-style:normal;font-size:22px}nav button.on{color:var(--b)}
+.card{background:var(--c);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px #0001}
+h2{margin:0 0 10px;font-size:20px;letter-spacing:-.3px}h3{margin:6px 0;font-size:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.m{color:var(--m);font-size:13px}
+label{display:block;color:var(--m);font-size:12px;font-weight:600;margin:8px 0 4px}
+input,textarea,select{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--l);border-radius:10px;background:var(--c);color:var(--t)}
+textarea{min-height:80px}
+button,.btn{font:inherit;border:0;border-radius:12px;padding:10px 14px;background:var(--g);color:var(--t);font-weight:600;min-height:42px;cursor:pointer;display:inline-block}
+.pri{background:var(--b);color:#fff}.dng{color:#ff3b30}button:disabled{opacity:.4}
+.chip{display:inline-block;padding:5px 11px;border-radius:99px;font-size:13px;font-weight:600;background:var(--g);margin:3px 4px 3px 0;min-height:0}
+.chip.on{background:var(--b);color:#fff}.big{padding:11px 15px;font-size:15px}
+.tile{background:var(--c);border:1px solid var(--l);border-radius:12px;padding:10px 12px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
+.tile.sel{outline:3px solid var(--b)}
+.area{padding:8px 10px;margin:8px 0;border-radius:10px;background:var(--bg);min-height:60px}
+.s0{background:#34c75933;color:#248a3d}.s1{background:#ff3b3033;color:#d70015}.s2{background:#ff950033;color:#c93400}
+.seg{display:inline-flex;background:var(--g);border-radius:10px;padding:2px}.seg button{background:none;min-height:34px;padding:6px 10px;font-size:13px}
+.seg button.on{background:var(--c);box-shadow:0 1px 3px #0003}.seg button.on.s0{color:#248a3d}.seg button.on.s1{color:#d70015}.seg button.on.s2{color:#c93400}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:12px}
+.kpi div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}.kpi b{font-size:26px;display:block}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.bar select{width:auto}
+#map{height:calc(100dvh - 250px);min-height:300px;border-radius:16px}
+.pg[hidden]{display:none}
+#modal{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+#modal.o{display:flex}#mo{background:var(--c);border-radius:20px;padding:20px;width:min(560px,100%);max-height:92vh;overflow:auto}
+</style></head><body>
+<header id="hd"></header><main>
+<div class="pg" id="p-info"></div><div class="pg" id="p-veh"></div>
+<div class="pg" id="p-map"><div class="bar">
+<span class="seg" id="mm"><button data-m="view" class="on" onclick="mode('view')">Ansicht</button><button data-m="draw" onclick="mode('draw')">Zeichnen</button><button data-m="pos" onclick="mode('pos')">Standort setzen</button></span>
+<select id="mcol" title="Abschnittsfarbe"></select><button onclick="undo()">↩︎ Zurück</button><button class="dng" onclick="clr()">Zeichnung löschen</button>
+<span class="seg"><button class="on" id="l0" onclick="lay(0)">Karte</button><button id="l1" onclick="lay(1)">Satellit</button></span>
+<button onclick="gps()">📍 GPS</button><button onclick="geo()">Adresse suchen</button></div><div id="map"></div></div>
+<div class="pg" id="p-dash"></div><div class="pg" id="p-notes"></div></main>
+<nav id="nav"></nav><div id="modal"><div id="mo"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const $=id=>document.getElementById(id),uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const K='fw-el-v1',ROLES=['Mieter','Eigentümer','Geschädigter','Anrufer','Zeuge'],ATS=['Bereit','Im Einsatz','Regeneration'],PAL=['#ff9500','#af52de','#30b0c7','#ff2d55','#34c759','#5856d6'];
+const SETS={'Löschzug Hauptwache':['10-11-01','10-48-01','10-48-02','10-32-01','10-89-01'],'Löschzug Ostwache':['20-11-01','20-48-01','20-48-02','20-32-01','20-89-01'],'Löschzug NW':['30-48-01','30-32-01','30-24-01','30-89-01'],'Sonderfahrzeuge':['AB ÖL','AB Sonderlösch','AB Schiffsbrand','AB Hygiene','AB Gefahr','AB Rüst','ELW 2','HLF FF']};
+const L={nr:'Einsatznummer',kw:'Stichwort',addr:'Adresse',el:'Einsatzleiter',start:'Beginn'};
+const fresh=()=>({info:{start:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16)},persons:[],veh:[],areas:[{id:'bs',name:'Bereitstellung',c:'#8e8e93'},{id:'ga',name:'Gefahrenabwehr',c:'#ff3b30'},{id:'lo',name:'Logistik',c:'#007aff'}],notes:[],diary:[],quick:'',draw:[]});
+let S=Object.assign(fresh(),(()=>{try{return JSON.parse(localStorage.getItem(K))}catch(e){return null}})()||{}),tab='info',sel=null,flt='';
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const log=(c,t)=>{S.diary.unshift({id:uid(),ts:new Date().toISOString(),c,t});save()};
+const fmt=t=>new Date(t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const A=id=>S.areas.find(a=>a.id==id)||S.areas[0],an=id=>{const a=A(id);return a.parent?A(a.parent).name+' / '+a.name:a.name};
+const pName=p=>[p.ln,p.fn].filter(Boolean).join(', ')||'Person ohne Namen';
+const cm=()=>$('modal').classList.remove('o'),mdl=h=>{$('mo').innerHTML=h;$('modal').classList.add('o')};
+
+/* ---------- Informationen ---------- */
+function pInfo(){const i=S.info,f=k=>`<div><label>${L[k]}</label><input type="${k=='start'?'datetime-local':'text'}" value="${esc(i[k])}" onchange="setI('${k}',this.value)"></div>`;
+const sum=ROLES.map(r=>{const n=S.persons.filter(p=>(p.roles||[]).includes(r));return n.length?`<div class="m"><b>${r}:</b> ${n.map(p=>esc(pName(p))).join('; ')}</div>`:''}).join('');
+return `<div class="card"><h2>Einsatzdaten</h2><div class="grid2">${['nr','kw','addr','el','start'].map(f).join('')}</div></div>
+<div class="card"><div class="row"><h2>Personen</h2><button class="pri" onclick="pf()">+ Person</button></div>${sum}
+<div class="grid2">${S.persons.map(p=>{const age=p.dob?Math.floor((Date.now()-new Date(p.dob))/315576e5):'';return `<div class="tile" onclick="pf('${p.id}')"><div><b>${esc(pName(p))}</b>${age!==''?` <span class="m">${age} J.</span>`:''} ${p.note?'💬':''}<div>${(p.roles||[]).concat(p.rfree?[p.rfree]:[]).map(r=>`<span class="chip">${esc(r)}</span>`).join('')}</div>${p.addr?`<div class="m">${esc(p.addr)}</div>`:''}</div></div>`}).join('')||'<p class="m">Noch keine Person angelegt.</p>'}</div></div>`}
+function setI(k,v){S.info[k]=v;log('Einsatzdaten',`${L[k]}: ${v}`);hdr()}
+function pf(id){const p=S.persons.find(x=>x.id==id)||{roles:[]};
+mdl(`<h2>${id?'Person bearbeiten':'Neue Person'}</h2><div class="grid2"><div><label>Vorname</label><input id="f1" value="${esc(p.fn)}"></div><div><label>Nachname</label><input id="f2" value="${esc(p.ln)}"></div><div><label>Geburtsdatum</label><input id="f3" type="date" value="${esc(p.dob)}"></div><div><label>Adresse</label><input id="f4" value="${esc(p.addr)}"></div></div>
+<label>Rollen</label><div>${ROLES.map(r=>`<button type="button" class="chip big ${(p.roles||[]).includes(r)?'on':''}" onclick="this.classList.toggle('on')">${r}</button>`).join('')}</div>
+<label>Weitere Rolle (Freitext)</label><input id="f5" value="${esc(p.rfree)}"><label>Notiz / Kommentar</label><textarea id="f6">${esc(p.note)}</textarea>
+<div class="row" style="margin-top:14px">${id?`<button class="dng" onclick="pd('${id}')">Löschen</button>`:'<span></span>'}<span><button onclick="cm()">Abbrechen</button> <button class="pri" onclick="ps('${id||''}')">Sichern</button></span></div>`)}
+function ps(id){const o={fn:$('f1').value,ln:$('f2').value,dob:$('f3').value,addr:$('f4').value,rfree:$('f5').value,note:$('f6').value,roles:[...document.querySelectorAll('#mo .chip.on')].map(e=>e.textContent)};
+if(id){Object.assign(S.persons.find(x=>x.id==id),o);log('Person',`${pName(o)} geändert`)}else{S.persons.push({id:uid(),...o});log('Person',`${pName(o)} angelegt`)}cm();save();render()}
+function pd(id){const p=S.persons.find(x=>x.id==id);if(!confirm('Person löschen?'))return;S.persons=S.persons.filter(x=>x.id!=id);log('Person',`${pName(p)} gelöscht`);cm();render()}
+
+/* ---------- Fahrzeuge ---------- */
+const isTr=n=>/-48-/.test(n);
+function av(n,s){if(S.veh.some(v=>v.name==n))return;S.veh.push({id:uid(),name:n,set:s,area:'bs',ats:isTr(n)?0:null});log('Fahrzeug',`${n} angelegt → Bereitstellung`)}
+const addV=(n,s)=>{av(n,s);save();render()},addSet=s=>{SETS[s].forEach(n=>av(n,s));save();render()};
+function rv(id){const v=S.veh.find(x=>x.id==id);S.veh=S.veh.filter(x=>x.id!=id);log('Fahrzeug',`${v.name} aus dem Einsatz entlassen`);save();render()}
+function custom(){const n=$('cv').value.trim();if(n)addV(n,'Eigene')}
+function setA(id,i){const v=S.veh.find(x=>x.id==id);log('Atemschutz',`${v.name} Trupp: ${ATS[v.ats]} → ${ATS[i]}`);v.ats=i;save();render()}
+const cyc=id=>setA(id,(S.veh.find(x=>x.id==id).ats+1)%3);
+function pVeh(){const pool=Object.entries(SETS).map(([s,l])=>`<div class="card"><div class="row"><h3>${s}</h3>${s=='Sonderfahrzeuge'?'':`<button class="pri" onclick="addSet('${s}')">Ganzen Zug +</button>`}</div><div>${l.map(n=>{const on=S.veh.some(v=>v.name==n);return `<button class="chip big ${on?'on':''}" ${on?'disabled':''} onclick="addV('${n}','${s}')">${n}${on?' ✓':''}</button>`}).join('')}</div></div>`).join('');
+const act=[...Object.keys(SETS),'Eigene'].map(s=>{const l=S.veh.filter(v=>(v.set||'Eigene')==s);return l.length?`<h3>${s}</h3>${l.map(v=>`<div class="tile"><div><b>${esc(v.name)}</b><div class="m">${esc(an(v.area))}</div></div><button class="dng" onclick="rv('${v.id}')">✕</button></div>`).join('')}`:''}).join('');
+const tr=S.veh.filter(v=>v.ats!=null).map(v=>`<div class="tile" style="cursor:default"><b>${v.name}</b><span class="seg">${ATS.map((a,i)=>`<button class="${v.ats==i?'on s'+i:''}" onclick="setA('${v.id}',${i})">${a}</button>`).join('')}</span></div>`).join('');
+return `<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"><div><h2>Fahrzeugpool</h2>${pool}<div class="card"><h3>Eigenes Fahrzeug</h3><div class="row"><input id="cv" placeholder="Kennung / Name"><button onclick="custom()">+</button></div></div></div>
+<div><h2>Im Einsatz (${S.veh.length})</h2><div class="card">${act||'<p class="m">Noch keine Fahrzeuge. Im Pool antippen.</p>'}</div><div class="card"><h3>Atemschutztrupps</h3>${tr||'<p class="m">Trupps erscheinen automatisch bei Fahrzeugen xx-48-xx.</p>'}</div></div></div>`}
+
+/* ---------- Dashboard ---------- */
+const areaV=id=>S.veh.filter(v=>v.area==id);
+function moveV(id,a){const v=S.veh.find(x=>x.id==id);sel=null;if(v&&v.area!=a){log('Abschnitt',`${v.name}: ${an(v.area)} → ${an(a)}`);v.area=a;save()}render()}
+const selV=id=>{sel=sel==id?null:id;render()},mv=a=>{if(sel)moveV(sel,a)},drop=(e,a)=>{e.preventDefault();moveV(e.dataTransfer.getData('t'),a)};
+function addSub(){const n=(prompt('Name des Unterabschnitts')||'').trim();if(!n)return;S.areas.push({id:uid(),name:n,parent:'ga',c:PAL[S.areas.filter(a=>a.parent).length%6]});log('Abschnitt',`Unterabschnitt ${n} angelegt`);save();render()}
+function delSub(id){if(!confirm('Unterabschnitt entfernen? Fahrzeuge gehen zurück in Gefahrenabwehr.'))return;areaV(id).forEach(v=>v.area='ga');log('Abschnitt',`Unterabschnitt ${A(id).name} entfernt`);S.areas=S.areas.filter(a=>a.id!=id);save();render()}
+function pDash(){const dt=v=>`<div class="tile ${sel==v.id?'sel':''}" draggable="true" ondragstart="event.dataTransfer.setData('t','${v.id}')" onclick="event.stopPropagation();selV('${v.id}')"><b>${esc(v.name)}</b>${v.ats!=null?`<span class="chip s${v.ats}" onclick="event.stopPropagation();cyc('${v.id}')">Trupp: ${ATS[v.ats]}</span>`:''}</div>`;
+const box=a=>`<div class="area" style="border-left:3px solid ${a.c}" ondragover="event.preventDefault()" ondrop="drop(event,'${a.id}')" onclick="mv('${a.id}')"><div class="row"><b>${esc(a.name)} <span class="m">${areaV(a.id).length}</span></b>${a.parent?`<button class="dng" onclick="event.stopPropagation();delSub('${a.id}')">✕</button>`:''}</div>${areaV(a.id).map(dt).join('')}</div>`;
+const n=i=>S.veh.filter(v=>v.ats===i).length,tot=S.veh.filter(v=>v.ats!=null).length;
+const rc=ROLES.map(r=>[r,S.persons.filter(p=>(p.roles||[]).includes(r)).length]).filter(x=>x[1]).map(x=>`${x[0]}: ${x[1]}`).join(' · ');
+return (sel?`<div class="card row" style="outline:2px solid var(--b)"><span>Gewählt: <b>${esc(S.veh.find(v=>v.id==sel).name)}</b> – Abschnitt antippen</span><button onclick="sel=null;render()">Abbrechen</button></div>`:'')+
+`<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">${S.areas.filter(a=>!a.parent).map(a=>`<div class="card">${box(a)}${a.id=='ga'?S.areas.filter(x=>x.parent).map(box).join('')+'<button onclick="addSub()">+ Unterabschnitt</button>':''}</div>`).join('')}</div>
+<div class="card"><h2>Analyse</h2><div class="kpi"><div><b>${S.veh.length}</b>Fahrzeuge</div><div><b>${tot}</b>Trupps</div><div class="s0"><b>${n(0)}</b>Bereit</div><div class="s1"><b>${n(1)}</b>Im Einsatz</div><div class="s2"><b>${n(2)}</b>Regeneration</div><div><b>${S.persons.length}</b>Personen</div></div>
+${S.areas.map(a=>`<div class="row"><span style="border-left:3px solid ${a.c};padding-left:8px">${a.parent?'↳ ':''}${esc(a.name)}</span><b>${areaV(a.id).length}</b></div>`).join('')}${rc?`<p class="m">${rc}</p>`:''}</div>`}
+
+/* ---------- Notizen / Tagebuch ---------- */
+const NS=['Offen','Erledigt','Wichtig'];
+function dl(){const q=flt.toLowerCase();return S.diary.filter(d=>(d.c+' '+d.t).toLowerCase().includes(q)).map(d=>`<div class="tile" style="cursor:default"><div><span class="m">${fmt(d.ts)}</span> <span class="chip ${d.c=='Manuell'?'on':''}">${esc(d.c)}</span><div>${esc(d.t)}</div></div></div>`).join('')||'<p class="m">Keine Einträge.</p>'}
+function pNotes(){return `<div class="card"><h2>Schnellnotiz</h2><textarea oninput="S.quick=this.value;save()">${esc(S.quick)}</textarea><button class="pri" style="margin-top:8px" onclick="nq()">Als Notiz übernehmen</button></div>
+<div class="card"><h2>Notizen</h2>${S.notes.map(n=>`<div class="tile" onclick="ne('${n.id}')"><div><span class="m">${fmt(n.ts)}</span><div>${esc(n.txt)}</div></div><span class="chip ${n.st==1?'s0':n.st==2?'s1':''}" onclick="event.stopPropagation();ns('${n.id}')">${NS[n.st]}</span></div>`).join('')||'<p class="m">Noch keine Notizen.</p>'}</div>
+<div class="card"><h2>Einsatztagebuch</h2><div class="row"><input id="dm" placeholder="Manueller Eintrag"><button onclick="dmA()">Eintragen</button></div><label>Suche</label><input value="${esc(flt)}" oninput="flt=this.value;$('dl').innerHTML=dl()"><div id="dl">${dl()}</div></div>
+<div class="card"><h2>Einsatz sichern</h2><button onclick="exp()">Exportieren (JSON)</button> <label class="btn" style="margin:0">Importieren<input type="file" hidden accept=".json" onchange="imp(this.files[0])"></label> <button class="dng" onclick="newInc()">Neuer Einsatz</button><p class="m">Regelmäßig exportieren: Die Browser-Speicherung allein ist keine sichere Sicherung.</p></div>`}
+function nq(){if(!S.quick.trim())return;S.notes.unshift({id:uid(),ts:new Date().toISOString(),txt:S.quick,st:0});log('Notiz','Notiz erstellt');S.quick='';save();render()}
+function ns(id){const n=S.notes.find(x=>x.id==id);n.st=(n.st+1)%3;log('Notiz',`Status: ${NS[n.st]}`);save();render()}
+function ne(id){const n=S.notes.find(x=>x.id==id),t=prompt('Notiz bearbeiten',n.txt);if(t!==null&&t!=n.txt){n.txt=t;log('Notiz','Notiz geändert');save();render()}}
+function dmA(){const v=$('dm').value.trim();if(v){log('Manuell',v);render()}}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download=`fw-einsatz-${(S.info.nr||new Date().toISOString().slice(0,10)).replace(/\W/g,'_')}.json`;a.click()}
+function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.veh)||!Array.isArray(d.areas))throw 0;if(!confirm('Aktuellen Einsatz durch die Datei ersetzen?'))return;S=Object.assign(fresh(),d);save();redraw();render()}catch(e){alert('Datei ungültig.')}};r.readAsText(f)}
+function newInc(){if(!confirm('Aktuellen Einsatz verwerfen und neu beginnen? Vorher exportieren!'))return;S=fresh();save();redraw();render()}
+
+/* ---------- Lagekarte ---------- */
+let map,base=[],drawn=[],cur,mk,md='view';
+const col=a=>A(a).c;
+function initMap(){map=L.map('map').setView(S.info.lat?[S.info.lat,S.info.lng]:[51.16,10.45],S.info.lat?18:6);
+base=[L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}),L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'})];base[0].addTo(map);
+const c=map.getContainer();
+c.addEventListener('pointerdown',e=>{if(md!='draw'||!e.isPrimary)return;cur=L.polyline([map.mouseEventToLatLng(e)],{color:col($('mcol').value),weight:4}).addTo(map);c.setPointerCapture(e.pointerId);e.preventDefault()});
+c.addEventListener('pointermove',e=>{if(cur)cur.addLatLng(map.mouseEventToLatLng(e))});
+const end=()=>{if(cur){S.draw.push({a:$('mcol').value,pts:cur.getLatLngs().map(p=>[p.lat,p.lng])});drawn.push(cur);cur=null;save()}};
+c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+map.on('click',e=>{if(md=='pos'){setPos(e.latlng.lat,e.latlng.lng);mode('view')}});redraw();if(S.info.lat)setPos(S.info.lat,S.info.lng,map.getZoom())}
+function redraw(){if(!map)return;drawn.forEach(l=>map.removeLayer(l));drawn=S.draw.map(d=>L.polyline(d.pts,{color:col(d.a),weight:4}).addTo(map));if(mk){map.removeLayer(mk);mk=null}if(S.info.lat)setPos(S.info.lat,S.info.lng,map.getZoom())}
+function setPos(la,ln,z=18){S.info.lat=la;S.info.lng=ln;save();map.setView([la,ln],z);if(mk)map.removeLayer(mk);mk=L.circleMarker([la,ln],{radius:9,color:'#fff',weight:3,fillColor:'#007aff',fillOpacity:1}).addTo(map)}
+function mode(m){md=m;document.querySelectorAll('#mm button').forEach(b=>b.classList.toggle('on',b.dataset.m==m));if(map)m=='draw'?map.dragging.disable():map.dragging.enable()}
+const lay=i=>{if(!map)return;base.forEach(b=>map.removeLayer(b));base[i].addTo(map);$('l0').classList.toggle('on',!i);$('l1').classList.toggle('on',!!i)};
+const undo=()=>{if(drawn.length){map.removeLayer(drawn.pop());S.draw.pop();save()}},clr=()=>{if(S.draw.length&&confirm('Gesamte Zeichnung löschen?')){S.draw=[];redraw()}};
+const gps=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>setPos(p.coords.latitude,p.coords.longitude),()=>alert('Standort nicht verfügbar. Adresse eingeben oder „Standort setzen“ nutzen.'),{enableHighAccuracy:true}):alert('Kein GPS verfügbar.');
+const geo=()=>{if(!S.info.addr)return alert('Zuerst im Tab Informationen eine Adresse eintragen.');fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(S.info.addr)).then(r=>r.json()).then(j=>j[0]?setPos(+j[0].lat,+j[0].lon):alert('Adresse nicht gefunden.')).catch(()=>alert('Keine Internetverbindung.'))};
+function mapShow(){const v=$('mcol').value||'ga';$('mcol').innerHTML=S.areas.map(a=>`<option value="${a.id}">${a.parent?'↳ ':''}${esc(a.name)}</option>`).join('');$('mcol').value=A(v).id==v?v:'ga';
+if(typeof L=='undefined'){$('map').innerHTML='<p class="m" style="padding:20px">Die Karte braucht Internet (Leaflet nicht geladen).</p>';return}
+if(!map)initMap();setTimeout(()=>map.invalidateSize(),60)}
+
+/* ---------- Rahmen ---------- */
+const hdr=()=>$('hd').innerHTML=`<b>Einsatzleiter Feuerwehr</b><span>${esc([S.info.nr,S.info.addr].filter(Boolean).join(' · '))}</span>`;
+const TABS=[['info','Informationen','📋'],['veh','Fahrzeuge','🚒'],['map','Lagekarte','🗺️'],['dash','Dashboard','📊'],['notes','Notizen','📝']];
+function go(t){tab=t;sel=null;render()}
+function render(){hdr();$('nav').innerHTML=TABS.map(([k,l,i])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')"><i>${i}</i>${l}</button>`).join('');
+TABS.forEach(([k])=>$('p-'+k).hidden=k!=tab);const f={info:pInfo,veh:pVeh,dash:pDash,notes:pNotes}[tab];if(f)$('p-'+tab).innerHTML=f();if(tab=='map')mapShow()}
+render();
+</script></body></html>
