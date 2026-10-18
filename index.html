@@ -37,7 +37,7 @@ button,.btn{font:inherit;border:0;border-radius:12px;padding:10px 14px;backgroun
 .kpi div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}.kpi b{font-size:26px;display:block}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.bar select{width:auto}
 #map{height:calc(100dvh - 250px);min-height:300px;border-radius:16px}
-.pg[hidden]{display:none}
+.pg[hidden]{display:none}.grip{touch-action:none;cursor:grab;padding:8px 10px;margin:-8px 0 -8px -6px;font-size:22px;color:var(--m);user-select:none;-webkit-user-select:none}.ghost{position:fixed;z-index:50;pointer-events:none;background:var(--b);color:#fff;padding:8px 14px;border-radius:12px;font-weight:600;transform:translate(-50%,-130%);box-shadow:0 6px 18px #0004}.hot{outline:2px dashed var(--b)}
 #modal{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
 #modal.o{display:flex}#mo{background:var(--c);border-radius:20px;padding:20px;width:min(560px,100%);max-height:92vh;overflow:auto}
 </style></head><body>
@@ -56,9 +56,9 @@ const $=id=>document.getElementById(id),uid=()=>Math.random().toString(36).slice
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const K='fw-el-v1',ROLES=['Mieter','Eigentümer','Geschädigter','Anrufer','Zeuge'],ATS=['Bereit','Im Einsatz','Regeneration'],PAL=['#ff9500','#af52de','#30b0c7','#ff2d55','#34c759','#5856d6'];
 const SETS={'Löschzug Hauptwache':['10-11-01','10-48-01','10-48-02','10-32-01','10-89-01'],'Löschzug Ostwache':['20-11-01','20-48-01','20-48-02','20-32-01','20-89-01'],'Löschzug NW':['30-48-01','30-32-01','30-24-01','30-89-01'],'Sonderfahrzeuge':['AB ÖL','AB Sonderlösch','AB Schiffsbrand','AB Hygiene','AB Gefahr','AB Rüst','ELW 2','HLF FF']};
-const L={nr:'Einsatznummer',kw:'Stichwort',addr:'Adresse',el:'Einsatzleiter',start:'Beginn'};
+const LBL={nr:'Einsatznummer',kw:'Stichwort',addr:'Adresse',el:'Einsatzleiter',start:'Beginn'};
 const fresh=()=>({info:{start:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16)},persons:[],veh:[],areas:[{id:'bs',name:'Bereitstellung',c:'#8e8e93'},{id:'ga',name:'Gefahrenabwehr',c:'#ff3b30'},{id:'lo',name:'Logistik',c:'#007aff'}],notes:[],diary:[],quick:'',draw:[]});
-let S=Object.assign(fresh(),(()=>{try{return JSON.parse(localStorage.getItem(K))}catch(e){return null}})()||{}),tab='info',sel=null,flt='';
+let S=Object.assign(fresh(),(()=>{try{return JSON.parse(localStorage.getItem(K))}catch(e){return null}})()||{}),tab='info',sel=null,flt='';const mig=()=>S.veh.forEach(v=>{if(!v.tr){v.tr=v.ats!=null?[v.ats]:[];delete v.ats}});mig();
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const log=(c,t)=>{S.diary.unshift({id:uid(),ts:new Date().toISOString(),c,t});save()};
 const fmt=t=>new Date(t).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -67,12 +67,12 @@ const pName=p=>[p.ln,p.fn].filter(Boolean).join(', ')||'Person ohne Namen';
 const cm=()=>$('modal').classList.remove('o'),mdl=h=>{$('mo').innerHTML=h;$('modal').classList.add('o')};
 
 /* ---------- Informationen ---------- */
-function pInfo(){const i=S.info,f=k=>`<div><label>${L[k]}</label><input type="${k=='start'?'datetime-local':'text'}" value="${esc(i[k])}" onchange="setI('${k}',this.value)"></div>`;
+function pInfo(){const i=S.info,f=k=>`<div><label>${LBL[k]}</label><input type="${k=='start'?'datetime-local':'text'}" value="${esc(i[k])}" onchange="setI('${k}',this.value)"></div>`;
 const sum=ROLES.map(r=>{const n=S.persons.filter(p=>(p.roles||[]).includes(r));return n.length?`<div class="m"><b>${r}:</b> ${n.map(p=>esc(pName(p))).join('; ')}</div>`:''}).join('');
 return `<div class="card"><h2>Einsatzdaten</h2><div class="grid2">${['nr','kw','addr','el','start'].map(f).join('')}</div></div>
 <div class="card"><div class="row"><h2>Personen</h2><button class="pri" onclick="pf()">+ Person</button></div>${sum}
 <div class="grid2">${S.persons.map(p=>{const age=p.dob?Math.floor((Date.now()-new Date(p.dob))/315576e5):'';return `<div class="tile" onclick="pf('${p.id}')"><div><b>${esc(pName(p))}</b>${age!==''?` <span class="m">${age} J.</span>`:''} ${p.note?'💬':''}<div>${(p.roles||[]).concat(p.rfree?[p.rfree]:[]).map(r=>`<span class="chip">${esc(r)}</span>`).join('')}</div>${p.addr?`<div class="m">${esc(p.addr)}</div>`:''}</div></div>`}).join('')||'<p class="m">Noch keine Person angelegt.</p>'}</div></div>`}
-function setI(k,v){S.info[k]=v;log('Einsatzdaten',`${L[k]}: ${v}`);hdr()}
+function setI(k,v){S.info[k]=v;log('Einsatzdaten',`${LBL[k]}: ${v}`);hdr()}
 function pf(id){const p=S.persons.find(x=>x.id==id)||{roles:[]};
 mdl(`<h2>${id?'Person bearbeiten':'Neue Person'}</h2><div class="grid2"><div><label>Vorname</label><input id="f1" value="${esc(p.fn)}"></div><div><label>Nachname</label><input id="f2" value="${esc(p.ln)}"></div><div><label>Geburtsdatum</label><input id="f3" type="date" value="${esc(p.dob)}"></div><div><label>Adresse</label><input id="f4" value="${esc(p.addr)}"></div></div>
 <label>Rollen</label><div>${ROLES.map(r=>`<button type="button" class="chip big ${(p.roles||[]).includes(r)?'on':''}" onclick="this.classList.toggle('on')">${r}</button>`).join('')}</div>
@@ -84,17 +84,23 @@ function pd(id){const p=S.persons.find(x=>x.id==id);if(!confirm('Person löschen
 
 /* ---------- Fahrzeuge ---------- */
 const isTr=n=>/-48-/.test(n);
-function av(n,s){if(S.veh.some(v=>v.name==n))return;S.veh.push({id:uid(),name:n,set:s,area:'bs',ats:isTr(n)?0:null});log('Fahrzeug',`${n} angelegt → Bereitstellung`)}
+function av(n,s){if(S.veh.some(v=>v.name==n))return;S.veh.push({id:uid(),name:n,set:s,area:'bs',tr:isTr(n)?[0]:[]});log('Fahrzeug',`${n} angelegt → Bereitstellung`)}
 const addV=(n,s)=>{av(n,s);save();render()},addSet=s=>{SETS[s].forEach(n=>av(n,s));save();render()};
 function rv(id){const v=S.veh.find(x=>x.id==id);S.veh=S.veh.filter(x=>x.id!=id);log('Fahrzeug',`${v.name} aus dem Einsatz entlassen`);save();render()}
 function custom(){const n=$('cv').value.trim();if(n)addV(n,'Eigene')}
-function setA(id,i){const v=S.veh.find(x=>x.id==id);log('Atemschutz',`${v.name} Trupp: ${ATS[v.ats]} → ${ATS[i]}`);v.ats=i;save();render()}
-const cyc=id=>setA(id,(S.veh.find(x=>x.id==id).ats+1)%3);
-function pVeh(){const pool=Object.entries(SETS).map(([s,l])=>`<div class="card"><div class="row"><h3>${s}</h3>${s=='Sonderfahrzeuge'?'':`<button class="pri" onclick="addSet('${s}')">Ganzen Zug +</button>`}</div><div>${l.map(n=>{const on=S.veh.some(v=>v.name==n);return `<button class="chip big ${on?'on':''}" ${on?'disabled':''} onclick="addV('${n}','${s}')">${n}${on?' ✓':''}</button>`}).join('')}</div></div>`).join('');
-const act=[...Object.keys(SETS),'Eigene'].map(s=>{const l=S.veh.filter(v=>(v.set||'Eigene')==s);return l.length?`<h3>${s}</h3>${l.map(v=>`<div class="tile"><div><b>${esc(v.name)}</b><div class="m">${esc(an(v.area))}</div></div><button class="dng" onclick="rv('${v.id}')">✕</button></div>`).join('')}`:''}).join('');
-const tr=S.veh.filter(v=>v.ats!=null).map(v=>`<div class="tile" style="cursor:default"><b>${v.name}</b><span class="seg">${ATS.map((a,i)=>`<button class="${v.ats==i?'on s'+i:''}" onclick="setA('${v.id}',${i})">${a}</button>`).join('')}</span></div>`).join('');
-return `<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"><div><h2>Fahrzeugpool</h2>${pool}<div class="card"><h3>Eigenes Fahrzeug</h3><div class="row"><input id="cv" placeholder="Kennung / Name"><button onclick="custom()">+</button></div></div></div>
-<div><h2>Im Einsatz (${S.veh.length})</h2><div class="card">${act||'<p class="m">Noch keine Fahrzeuge. Im Pool antippen.</p>'}</div><div class="card"><h3>Atemschutztrupps</h3>${tr||'<p class="m">Trupps erscheinen automatisch bei Fahrzeugen xx-48-xx.</p>'}</div></div></div>`}
+const V=id=>S.veh.find(x=>x.id==id);
+function setA(id,k,i){const v=V(id);log('Atemschutz',`${v.name} Trupp ${k+1}: ${ATS[v.tr[k]]} → ${ATS[i]}`);v.tr[k]=i;save();render()}
+const cyc=(id,k)=>setA(id,k,(V(id).tr[k]+1)%3);
+function addT(id){const v=V(id);v.tr.push(0);log('Atemschutz',`${v.name}: Trupp ${v.tr.length} hinzugefügt`);save();render()}
+function delT(id,k){const v=V(id);if(!confirm(`Trupp ${k+1} von ${v.name} entfernen?`))return;v.tr.splice(k,1);log('Atemschutz',`${v.name}: Trupp ${k+1} entfernt`);save();render()}
+const pool=(f,g)=>Object.entries(SETS).map(([s,l])=>`<div class="card"><div class="row"><h3>${s}</h3>${s=='Sonderfahrzeuge'?'':`<button class="pri" onclick="${g}('${s}')">Ganzen Zug +</button>`}</div><div>${l.map(n=>{const on=S.veh.some(v=>v.name==n);return `<button class="chip big ${on?'on':''}" ${on?'disabled':''} onclick="${f}('${n}','${s}')">${n}${on?' ✓':''}</button>`}).join('')}</div></div>`).join('');
+const trs=v=>v.tr.map((s,k)=>`<div style="margin:4px 0"><span class="m">T${k+1}</span> <span class="seg">${ATS.map((a,i)=>`<button class="${s==i?'on s'+i:''}" onclick="setA('${v.id}',${k},${i})">${a}</button>`).join('')}</span> <button class="dng" onclick="delT('${v.id}',${k})">✕</button></div>`).join('');
+function pVeh(){const act=[...Object.keys(SETS),'Eigene'].map(s=>{const l=S.veh.filter(v=>(v.set||'Eigene')==s);return l.length?`<h3>${s}</h3>${l.map(v=>`<div class="tile" style="cursor:default"><div><b>${esc(v.name)}</b><div class="m">${esc(an(v.area))} · ${v.tr.length} Trupp${v.tr.length==1?'':'s'}</div></div><span><button onclick="addT('${v.id}')">+ Trupp</button> <button class="dng" onclick="rv('${v.id}')">✕</button></span></div>`).join('')}`:''}).join('');
+const tr=S.veh.filter(v=>v.tr.length).map(v=>`<div class="tile" style="cursor:default;align-items:flex-start"><b>${esc(v.name)}</b><div>${trs(v)}</div></div>`).join('');
+return `<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"><div><h2>Fahrzeugpool</h2>${pool('addV','addSet')}<div class="card"><h3>Eigenes Fahrzeug</h3><div class="row"><input id="cv" placeholder="Kennung / Name"><button onclick="custom()">+</button></div></div></div>
+<div><h2>Im Einsatz (${S.veh.length})</h2><div class="card">${act||'<p class="m">Noch keine Fahrzeuge. Im Pool antippen.</p>'}</div><div class="card"><h3>Atemschutztrupps</h3>${tr||'<p class="m">Trupps erscheinen automatisch bei xx-48-xx. Weitere über „+ Trupp“.</p>'}</div></div></div>`}
+const qa=(n,s)=>{av(n,s);save();render();vq()},qs=s=>{SETS[s].forEach(n=>av(n,s));save();render();vq()},qc=()=>{const n=$('cq').value.trim();if(n){av(n,'Eigene');save();render();vq()}};
+function vq(){const t=$('mo').scrollTop;mdl(`<div class="row"><h2>Fahrzeug hinzufügen</h2><button class="pri" onclick="cm()">Fertig</button></div>${pool('qa','qs')}<div class="row"><input id="cq" placeholder="Eigenes Fahrzeug"><button onclick="qc()">+</button></div>`);$('mo').scrollTop=t}
 
 /* ---------- Dashboard ---------- */
 const areaV=id=>S.veh.filter(v=>v.area==id);
@@ -102,11 +108,15 @@ function moveV(id,a){const v=S.veh.find(x=>x.id==id);sel=null;if(v&&v.area!=a){l
 const selV=id=>{sel=sel==id?null:id;render()},mv=a=>{if(sel)moveV(sel,a)},drop=(e,a)=>{e.preventDefault();moveV(e.dataTransfer.getData('t'),a)};
 function addSub(){const n=(prompt('Name des Unterabschnitts')||'').trim();if(!n)return;S.areas.push({id:uid(),name:n,parent:'ga',c:PAL[S.areas.filter(a=>a.parent).length%6]});log('Abschnitt',`Unterabschnitt ${n} angelegt`);save();render()}
 function delSub(id){if(!confirm('Unterabschnitt entfernen? Fahrzeuge gehen zurück in Gefahrenabwehr.'))return;areaV(id).forEach(v=>v.area='ga');log('Abschnitt',`Unterabschnitt ${A(id).name} entfernt`);S.areas=S.areas.filter(a=>a.id!=id);save();render()}
-function pDash(){const dt=v=>`<div class="tile ${sel==v.id?'sel':''}" draggable="true" ondragstart="event.dataTransfer.setData('t','${v.id}')" onclick="event.stopPropagation();selV('${v.id}')"><b>${esc(v.name)}</b>${v.ats!=null?`<span class="chip s${v.ats}" onclick="event.stopPropagation();cyc('${v.id}')">Trupp: ${ATS[v.ats]}</span>`:''}</div>`;
-const box=a=>`<div class="area" style="border-left:3px solid ${a.c}" ondragover="event.preventDefault()" ondrop="drop(event,'${a.id}')" onclick="mv('${a.id}')"><div class="row"><b>${esc(a.name)} <span class="m">${areaV(a.id).length}</span></b>${a.parent?`<button class="dng" onclick="event.stopPropagation();delSub('${a.id}')">✕</button>`:''}</div>${areaV(a.id).map(dt).join('')}</div>`;
-const n=i=>S.veh.filter(v=>v.ats===i).length,tot=S.veh.filter(v=>v.ats!=null).length;
+let dg=null;
+function ds(e,id){e.preventDefault();e.stopPropagation();const g=document.createElement('div');g.className='ghost';g.textContent=V(id).name;document.body.appendChild(g);dg={id,g};e.currentTarget.setPointerCapture(e.pointerId);dmv(e)}
+function dmv(e){if(!dg)return;dg.g.style.left=e.clientX+'px';dg.g.style.top=e.clientY+'px';document.querySelectorAll('.hot').forEach(x=>x.classList.remove('hot'));const a=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-a]');if(a)a.classList.add('hot');if(e.clientY>innerHeight-110)scrollBy(0,14);if(e.clientY<130)scrollBy(0,-14)}
+function dend(e){if(!dg)return;const a=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-a]'),id=dg.id;dg.g.remove();dg=null;document.querySelectorAll('.hot').forEach(x=>x.classList.remove('hot'));if(a)moveV(id,a.dataset.a)}
+function pDash(){const dt=v=>`<div class="tile ${sel==v.id?'sel':''}" onclick="event.stopPropagation();selV('${v.id}')"><span class="grip" onclick="event.stopPropagation()" onpointerdown="ds(event,'${v.id}')" onpointermove="dmv(event)" onpointerup="dend(event)" onpointercancel="dend(event)">⠿</span><b style="flex:1">${esc(v.name)}</b><span>${v.tr.map((s,k)=>`<span class="chip s${s}" onclick="event.stopPropagation();cyc('${v.id}',${k})">T${k+1} ${ATS[s]}</span>`).join('')}<span class="chip" onclick="event.stopPropagation();addT('${v.id}')">+ T</span></span></div>`;
+const box=a=>`<div class="area" data-a="${a.id}" style="border-left:3px solid ${a.c}" onclick="mv('${a.id}')"><div class="row"><b>${esc(a.name)} <span class="m">${areaV(a.id).length}</span></b>${a.parent?`<button class="dng" onclick="event.stopPropagation();delSub('${a.id}')">✕</button>`:''}${a.id=='bs'?'<button class="pri" onclick="event.stopPropagation();vq()">+ Fahrzeug</button>':''}</div>${areaV(a.id).map(dt).join('')}</div>`;
+const n=i=>S.veh.reduce((s,v)=>s+v.tr.filter(x=>x==i).length,0),tot=S.veh.reduce((s,v)=>s+v.tr.length,0);
 const rc=ROLES.map(r=>[r,S.persons.filter(p=>(p.roles||[]).includes(r)).length]).filter(x=>x[1]).map(x=>`${x[0]}: ${x[1]}`).join(' · ');
-return (sel?`<div class="card row" style="outline:2px solid var(--b)"><span>Gewählt: <b>${esc(S.veh.find(v=>v.id==sel).name)}</b> – Abschnitt antippen</span><button onclick="sel=null;render()">Abbrechen</button></div>`:'')+
+return (sel?`<div class="card row" style="outline:2px solid var(--b)"><span>Gewählt: <b>${esc(V(sel).name)}</b> – Abschnitt antippen</span><button onclick="sel=null;render()">Abbrechen</button></div>`:'<p class="m">Fahrzeuge am Griff ⠿ in einen Abschnitt ziehen oder antippen und dann den Abschnitt antippen.</p>')+
 `<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">${S.areas.filter(a=>!a.parent).map(a=>`<div class="card">${box(a)}${a.id=='ga'?S.areas.filter(x=>x.parent).map(box).join('')+'<button onclick="addSub()">+ Unterabschnitt</button>':''}</div>`).join('')}</div>
 <div class="card"><h2>Analyse</h2><div class="kpi"><div><b>${S.veh.length}</b>Fahrzeuge</div><div><b>${tot}</b>Trupps</div><div class="s0"><b>${n(0)}</b>Bereit</div><div class="s1"><b>${n(1)}</b>Im Einsatz</div><div class="s2"><b>${n(2)}</b>Regeneration</div><div><b>${S.persons.length}</b>Personen</div></div>
 ${S.areas.map(a=>`<div class="row"><span style="border-left:3px solid ${a.c};padding-left:8px">${a.parent?'↳ ':''}${esc(a.name)}</span><b>${areaV(a.id).length}</b></div>`).join('')}${rc?`<p class="m">${rc}</p>`:''}</div>`}
@@ -123,7 +133,7 @@ function ns(id){const n=S.notes.find(x=>x.id==id);n.st=(n.st+1)%3;log('Notiz',`S
 function ne(id){const n=S.notes.find(x=>x.id==id),t=prompt('Notiz bearbeiten',n.txt);if(t!==null&&t!=n.txt){n.txt=t;log('Notiz','Notiz geändert');save();render()}}
 function dmA(){const v=$('dm').value.trim();if(v){log('Manuell',v);render()}}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download=`fw-einsatz-${(S.info.nr||new Date().toISOString().slice(0,10)).replace(/\W/g,'_')}.json`;a.click()}
-function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.veh)||!Array.isArray(d.areas))throw 0;if(!confirm('Aktuellen Einsatz durch die Datei ersetzen?'))return;S=Object.assign(fresh(),d);save();redraw();render()}catch(e){alert('Datei ungültig.')}};r.readAsText(f)}
+function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.veh)||!Array.isArray(d.areas))throw 0;if(!confirm('Aktuellen Einsatz durch die Datei ersetzen?'))return;S=Object.assign(fresh(),d);mig();save();redraw();render()}catch(e){alert('Datei ungültig.')}};r.readAsText(f)}
 function newInc(){if(!confirm('Aktuellen Einsatz verwerfen und neu beginnen? Vorher exportieren!'))return;S=fresh();save();redraw();render()}
 
 /* ---------- Lagekarte ---------- */
